@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OWNER
+  VIEWER
+}
+
+enum PermissionType {
+  READ
+  EDIT
+}
+
+enum AuditResult {
+  SUCCESS
+  DENIED
+}
+
+model User {
+  id                 String               @id @default(uuid())
+  email              String               @unique
+  name               String
+  passwordHash       String
+  role               Role                 @default(VIEWER)
+  isActive           Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  documents          Document[]
+  permissions        DocumentPermission[] @relation("PermUser")
+  grantedPermissions DocumentPermission[] @relation("PermGrantor")
+}
+
+model Document {
+  id             String               @id @default(uuid())
+  title          String
+  description    String               @default("")
+  category       String               @default("General")
+  ownerId        String
+  owner          User                 @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  currentVersion Int                  @default(1)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  versions       DocumentVersion[]
+  permissions    DocumentPermission[]
+
+  @@index([ownerId])
+  @@index([category])
+}
+
+model DocumentVersion {
+  id            String   @id @default(uuid())
+  documentId    String
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  storageName   String   @unique
+  originalName  String
+  mimeType      String
+  sizeBytes     Int
+  sha256        String
+  uploadedById  String
+  createdAt     DateTime @default(now())
+
+  @@unique([documentId, versionNumber])
+}
+
+model DocumentPermission {
+  id          String         @id @default(uuid())
+  documentId  String
+  document    Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User           @relation("PermUser", fields: [userId], references: [id], onDelete: Restrict)
+  type        PermissionType
+  grantedById String
+  grantedBy   User           @relation("PermGrantor", fields: [grantedById], references: [id], onDelete: Restrict)
+  grantedAt   DateTime       @default(now())
+  revoked     Boolean        @default(false)
+  revokedAt   DateTime?
+
+  @@index([documentId, userId, revoked])
+  @@index([userId, revoked])
+}
+
+// No foreign keys on purpose: audit history must survive deleted documents.
+model AuditLog {
+  id           Int         @id @default(autoincrement())
+  userId       String?
+  documentId   String?
+  action       String
+  result       AuditResult
+  ipAddress    String?
+  metadata     Json        @default("{}")
+  previousHash String
+  currentHash  String
+  createdAt    DateTime    @default(now())
+
+  @@index([userId])
+  @@index([documentId])
+  @@index([action])
+  @@index([createdAt])
+}
