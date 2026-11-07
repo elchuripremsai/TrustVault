@@ -129,6 +129,8 @@ Do this yourself before claiming it in your submission.
 
 ## Deploying on Render
 
+The repository includes a Render Blueprint at [`render.yaml`](./render.yaml). In Render, choose **New → Blueprint** and select the repository. Review the services and plans before applying; the API persistent disk and database require paid plans. The static site calls the API directly, so the API's `CLIENT_ORIGIN` must match the frontend URL. If Render assigns a different URL, update `CLIENT_ORIGIN` in the API service and `VITE_API_URL` in the static site build environment.
+
 1. **Database:** New > PostgreSQL. Copy the *Internal* database URL.
 2. **API:** New > Web Service from your GitHub repo.
    - Root directory `server`, build command `npm install && npm run build`, start command `npm start`
