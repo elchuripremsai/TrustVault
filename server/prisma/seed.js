@@ -10,9 +10,9 @@ const DEMO_PASSWORD = 'TrustVault#Demo26';
 async function main() {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
   const people = [
-    { email: 'admin@trustvault.demo', name: 'Asha Admin', role: 'ADMIN' },
-    { email: 'owner@trustvault.demo', name: 'Omar Owner', role: 'OWNER' },
-    { email: 'viewer@trustvault.demo', name: 'Vera Viewer', role: 'VIEWER' },
+    { email: 'admin@trustvault.demo', name: 'PREM Admin', role: 'ADMIN' },
+    { email: 'owner@trustvault.demo', name: 'sAATHWIK Owner', role: 'OWNER' },
+    { email: 'viewer@trustvault.demo', name: 'PRASHANTH Viewer', role: 'VIEWER' },
   ];
   const users = {};
   for (const p of people) {
