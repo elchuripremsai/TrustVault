@@ -16,7 +16,7 @@ const binary = (res, cb) => {
 
 async function makeUser(role, name) {
   return prisma.user.create({
-    data: { email: `${name}@test.local`, name, role, passwordHash: await bcrypt.hash(PASSWORD, 4) },
+    data: { email: `${name}@test.local`, name, role, passwordHash: await bcrypt.hash(PASSWORD, 4), emailVerified: true },
   });
 }
 
@@ -68,6 +68,58 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await prisma.$disconnect();
+});
+
+describe('Public account registration', () => {
+  test('new account requires a one-time email verification before login', async () => {
+    const previousApiKey = process.env.RESEND_API_KEY;
+    const previousFrom = process.env.EMAIL_FROM;
+    process.env.RESEND_API_KEY = 'test-resend-key';
+    process.env.EMAIL_FROM = 'TrustVault <no-reply@test.local>';
+    const sendEmail = jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, status: 200 });
+
+    try {
+      const registration = await request(app).post('/api/auth/register').send({
+        name: 'New User',
+        email: 'new-user@example.test',
+        password: 'a-safe-test-password',
+      });
+      expect(registration.status).toBe(202);
+
+      const user = await prisma.user.findUnique({ where: { email: 'new-user@example.test' } });
+      expect(user.role).toBe('OWNER');
+      expect(user.emailVerified).toBe(false);
+
+      const loginBeforeVerification = await request(app).post('/api/auth/login').send({
+        email: user.email,
+        password: 'a-safe-test-password',
+      });
+      expect(loginBeforeVerification.status).toBe(403);
+      expect(loginBeforeVerification.body.code).toBe('EMAIL_NOT_VERIFIED');
+
+      const email = JSON.parse(sendEmail.mock.calls[0][1].body);
+      const verificationUrl = email.text.match(/https?:\/\/\S+/)[0];
+      const token = new URLSearchParams(new URL(verificationUrl).hash.slice(1)).get('token');
+      expect(token).toMatch(/^[a-f0-9]{64}$/);
+
+      const verification = await request(app).post('/api/auth/verify-email').send({ token });
+      expect(verification.status).toBe(200);
+      expect((await prisma.user.findUnique({ where: { id: user.id } })).emailVerified).toBe(true);
+
+      const loginAfterVerification = await request(app).post('/api/auth/login').send({
+        email: user.email,
+        password: 'a-safe-test-password',
+      });
+      expect(loginAfterVerification.status).toBe(200);
+      expect((await request(app).post('/api/auth/verify-email').send({ token })).status).toBe(400);
+    } finally {
+      sendEmail.mockRestore();
+      if (previousApiKey === undefined) delete process.env.RESEND_API_KEY;
+      else process.env.RESEND_API_KEY = previousApiKey;
+      if (previousFrom === undefined) delete process.env.EMAIL_FROM;
+      else process.env.EMAIL_FROM = previousFrom;
+    }
+  });
 });
 
 describe('Document access (read/download)', () => {

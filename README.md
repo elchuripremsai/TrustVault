@@ -18,7 +18,7 @@ The rule that matters most: **an unauthorised user can never read, download, edi
 
 ## Features
 
-- Login/logout with bcrypt password hashing, httpOnly cookie session, CSRF token, rate-limited login
+- Public registration with Resend email verification, bcrypt password hashing, httpOnly cookie session, CSRF token, and rate-limited auth endpoints
 - Three roles: **Admin**, **Owner**, **Viewer** (role is re-read from the database on every request)
 - Upload with size limit, extension allow-list, magic-byte check, random storage names, private storage
 - Per-document permissions (READ / EDIT) with granted-by, dates and revoke history
@@ -92,11 +92,21 @@ Instead of Prisma migrate you can run `psql trustvault -f database/schema.sql`, 
 | server | `DATABASE_URL` | PostgreSQL connection string |
 | server | `JWT_SECRET` | Random string, at least 32 characters |
 | server | `CLIENT_ORIGIN` | Frontend URL for CORS, no trailing slash |
+| server | `RESEND_API_KEY` | Resend API key used to send registration verification emails |
+| server | `EMAIL_FROM` | Sender address on a domain verified with Resend |
 | server | `PORT` | Default 4000 |
 | server | `STORAGE_DIR` | Private folder for uploaded files (default `server/storage`) |
 | server | `MAX_FILE_BYTES` | Upload limit, default 10 MB |
 | server | `SEED_SAMPLE` | Set to `false` to seed users only |
 | client | `VITE_API_URL` | Full API URL for production builds (leave empty if you proxy `/api`) |
+
+### Public account registration
+
+New sign-ups become `OWNER` accounts and cannot log in until they verify the email address. Configure `RESEND_API_KEY`
+and `EMAIL_FROM` in the server environment. `EMAIL_FROM` must use a sender domain verified with Resend. The verification
+link is sent to the frontend origin configured by `CLIENT_ORIGIN`. On Render, set the API's `CLIENT_ORIGIN` to the exact
+static-site URL, then add the Resend API key and verified sender address to the API service's environment. Admin-created
+accounts and the local demo accounts are marked verified.
 
 ## Demo accounts (demo only)
 
@@ -134,7 +144,7 @@ The repository includes a Render Blueprint at [`render.yaml`](./render.yaml). In
 1. **Database:** New > PostgreSQL. Copy the *Internal* database URL.
 2. **API:** New > Web Service from your GitHub repo.
    - Root directory `server`, build command `npm install && npm run build`, start command `npm start`
-   - Env: `NODE_ENV=production`, `DATABASE_URL`, `JWT_SECRET`, `CLIENT_ORIGIN` (your frontend URL)
+   - Env: `NODE_ENV=production`, `DATABASE_URL`, `JWT_SECRET`, `CLIENT_ORIGIN` (your frontend URL), `RESEND_API_KEY`, and `EMAIL_FROM` (a sender address on a domain verified with Resend)
    - **Files:** Render's normal disk is wiped on every deploy and restart. Add a persistent disk (paid plan), mount it at
      `/var/data`, and set `STORAGE_DIR=/var/data/storage`. On a free plan, uploaded files will disappear (accepted limitation).
 3. **Frontend:** New > Static Site from the same repo.

@@ -83,7 +83,7 @@ router.post('/users', wrap(async (req, res) => {
   const data = createUserSchema.parse(req.body);
   const passwordHash = await bcrypt.hash(data.password, 12);
   const user = await prisma.$transaction(async (tx) => {
-    const u = await tx.user.create({ data: { email: data.email, name: data.name, role: data.role, passwordHash } });
+    const u = await tx.user.create({ data: { email: data.email, name: data.name, role: data.role, passwordHash, emailVerified: true } });
     await logAudit({ userId: req.user.id, action: 'USER_CREATED', ip: req.ip, metadata: { targetUserId: u.id, email: u.email, role: u.role } }, tx);
     return u;
   });

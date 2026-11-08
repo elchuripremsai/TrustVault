@@ -31,10 +31,13 @@ services:
         value: https://trustvault-web.onrender.com
       - key: STORAGE_DIR
         value: /var/data/storage
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
 
-  - type: web
+  - type: static
     name: trustvault-web
-    runtime: static
     rootDir: client
     buildCommand: npm install && npm run build
     staticPublishPath: dist

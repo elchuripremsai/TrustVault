@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { AuthProvider, useAuth } from './AuthContext.jsx';
 import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
+import VerifyEmail from './pages/VerifyEmail.jsx';
 import AdminOverview from './pages/AdminOverview.jsx';
 import AdminUsers from './pages/AdminUsers.jsx';
 import AdminDocuments from './pages/AdminDocuments.jsx';
@@ -35,6 +36,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route element={<Protected />}>
             <Route path="/" element={<Home />} />
             <Route element={<RoleRoute roles={['ADMIN']} />}>

@@ -16,7 +16,11 @@ async function main() {
   ];
   const users = {};
   for (const p of people) {
-    users[p.role] = await prisma.user.upsert({ where: { email: p.email }, update: {}, create: { ...p, passwordHash } });
+    users[p.role] = await prisma.user.upsert({
+      where: { email: p.email },
+      update: { emailVerified: true },
+      create: { ...p, passwordHash, emailVerified: true },
+    });
   }
 
   const title = 'Welcome to TrustVault (sample)';

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Loader2, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../AuthContext.jsx';
-import { errMsg } from '../api.js';
+import { api, errMsg } from '../api.js';
 import { ErrorBox } from '../components/ui.jsx';
 
 // A picture of what makes TrustVault different: every event is chained to the one before it.
@@ -13,19 +13,17 @@ const CHAIN = [
   { a: 'PERMISSION_REVOKED', who: 'owner', prev: '07f1…b3c4', hash: 'a2d6…19ef' },
 ];
 
-const DEMO = [
-  { label: 'Admin', email: 'admin@trustvault.demo' },
-  { label: 'Owner', email: 'owner@trustvault.demo' },
-  { label: 'Viewer', email: 'viewer@trustvault.demo' },
-];
-
 export default function Login() {
   const { user, login } = useAuth();
   const nav = useNavigate();
+  const [mode, setMode] = useState('login');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [needsVerification, setNeedsVerification] = useState(false);
 
   if (user) return <Navigate to="/" replace />;
 
@@ -33,9 +31,31 @@ export default function Login() {
     e.preventDefault();
     setBusy(true);
     setError('');
+    setNotice('');
+    setNeedsVerification(false);
     try {
-      await login(email, password);
-      nav('/', { replace: true });
+      if (mode === 'register') {
+        const response = await api.post('/auth/register', { name, email, password });
+        setNotice(response.data.message);
+      } else {
+        await login(email, password);
+        nav('/', { replace: true });
+      }
+    } catch (err) {
+      setError(errMsg(err));
+      setNeedsVerification(err.response?.data?.code === 'EMAIL_NOT_VERIFIED');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resendVerification() {
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await api.post('/auth/resend-verification', { email });
+      setNotice(response.data.message);
     } catch (err) {
       setError(errMsg(err));
     } finally {
@@ -65,23 +85,57 @@ export default function Login() {
 
       <section className="flex items-center justify-center bg-white p-6">
         <form onSubmit={submit} className="w-full max-w-sm">
-          <h1 className="text-2xl font-semibold">Log in</h1>
-          <p className="mb-6 mt-1 text-sm text-slate-500">Use your company account.</p>
+          <h1 className="text-2xl font-semibold">{mode === 'login' ? 'Log in' : 'Create your account'}</h1>
+          <p className="mb-6 mt-1 text-sm text-slate-500">
+            {mode === 'login' ? 'Use your TrustVault account.' : 'Verify your email address to activate your account.'}
+          </p>
           <ErrorBox message={error} />
+          {notice && <p className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800" role="status">{notice}</p>}
+          {mode === 'register' && (
+            <>
+              <label className="label" htmlFor="name">Name</label>
+              <input id="name" className="input mb-4" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" maxLength={100} required />
+            </>
+          )}
           <label className="label" htmlFor="email">Email</label>
-          <input id="email" type="email" className="input mb-4" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
+          <input id="email" type="email" className="input mb-4" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" maxLength={200} required />
           <label className="label" htmlFor="password">Password</label>
-          <input id="password" type="password" className="input mb-5" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+          <input
+            id="password"
+            type="password"
+            className="input mb-2"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+            minLength={mode === 'register' ? 12 : 1}
+            maxLength={100}
+            required
+          />
+          {mode === 'register' && <p className="mb-5 text-xs text-slate-500">Use at least 12 characters.</p>}
+          {mode === 'login' && <div className="mb-5" />}
           <button className="btn-primary w-full" disabled={busy}>
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Log in
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+            {mode === 'login' ? 'Log in' : 'Create account'}
           </button>
-          <div className="mt-8 rounded-md bg-mist p-3 text-sm">
-            <div className="mb-2 text-slate-600">Demo accounts (fills the email; the password is in the README):</div>
-            <div className="flex gap-2">
-              {DEMO.map((d) => (
-                <button type="button" key={d.label} className="btn-ghost flex-1 !px-2 !py-1.5" onClick={() => setEmail(d.email)}>{d.label}</button>
-              ))}
-            </div>
+          {needsVerification && (
+            <button type="button" className="mt-3 w-full text-sm font-medium text-navy-700 underline" onClick={resendVerification} disabled={busy}>
+              Resend verification email
+            </button>
+          )}
+          <div className="mt-5 text-center text-sm text-slate-600">
+            {mode === 'login' ? "New to TrustVault? " : 'Already have an account? '}
+            <button
+              type="button"
+              className="font-medium text-navy-800 underline"
+              onClick={() => {
+                setMode(mode === 'login' ? 'register' : 'login');
+                setError('');
+                setNotice('');
+                setNeedsVerification(false);
+              }}
+            >
+              {mode === 'login' ? 'Create an account' : 'Log in'}
+            </button>
           </div>
         </form>
       </section>
