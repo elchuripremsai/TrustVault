@@ -1,4 +1,3 @@
-
 databases:
   - name: trustvault-db
     plan: basic-256mb
