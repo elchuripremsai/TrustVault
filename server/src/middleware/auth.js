@@ -18,6 +18,7 @@ function issueSession(res, user) {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? 'none' : 'lax',
+    partitioned: isProd,
     maxAge: sessionMs,
     path: '/',
   });
@@ -25,7 +26,13 @@ function issueSession(res, user) {
 }
 
 function clearSession(res) {
-  res.clearCookie(cookieName, { httpOnly: true, secure: isProd, sameSite: isProd ? 'none' : 'lax', path: '/' });
+  res.clearCookie(cookieName, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    partitioned: isProd,
+    path: '/',
+  });
 }
 
 // Runs on every protected route. The user and role are ALWAYS re-read from the database.

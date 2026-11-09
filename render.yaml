@@ -28,7 +28,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: CLIENT_ORIGIN
-        value: https://trustvault-web.onrender.com
+        value: https://trustvault-web-k6un.onrender.com
       - key: STORAGE_DIR
         value: /var/data/storage
       - key: RESEND_API_KEY
@@ -43,7 +43,7 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
-        value: https://trustvault-api.onrender.com/api
+        value: https://trustvault-ci3v.onrender.com/api
     routes:
       - type: rewrite
         source: /*
